@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Unit + Integration tests (no real LLM calls) ──────────────────────────
+  test:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Run unit & integration tests
+        env:
+          OPENAI_API_KEY: sk-test-placeholder
+        run: uv run pytest tests/ -v --tb=short
+
+  # ── E2E tests (Playwright, real app, skipped without OPENAI_API_KEY) ──────
+  e2e:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    # Only run when the secret is available (skips on forks / no-secret PRs)
+    if: ${{ vars.RUN_E2E == 'true' || github.event_name == 'push' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Install Playwright + browsers
+        run: |
+          uv add --dev playwright pytest-playwright
+          uv run playwright install chromium --with-deps
+
+      - name: Start app server
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          uv run uvicorn main:app --host 0.0.0.0 --port 8000 &
+          # Wait for the server to be ready
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8000/health && break
+            sleep 1
+          done
+
+      - name: Run E2E tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          BASE_URL: http://localhost:8000
+        run: uv run pytest tests/e2e/ -v --tb=short
+
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
