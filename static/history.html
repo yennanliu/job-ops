@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>History — Resume Tailor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .page { max-width: 1100px; margin: 0 auto; padding: 32px 28px 80px; width: 100%; }
+    .page-header { margin-bottom: 24px; }
+    .page-title { font-size: 26px; font-weight: 800; letter-spacing: -.4px; }
+    .page-sub { font-size: 14px; color: var(--text-2); margin-top: 5px; }
+
+    /* Pagination */
+    .pagination { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-2); }
+    .pagination-info { flex: 1; }
+
+    /* Table */
+    .table-card { background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--surface); }
+    th { padding: 12px 20px; font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .09em; text-align: left; white-space: nowrap; }
+    td { padding: 15px 20px; font-size: 13px; border-top: 1px solid var(--border); vertical-align: middle; }
+    tbody tr { cursor: pointer; transition: background .1s; }
+    tbody tr:hover td { background: #F5F3FF; }
+    tbody tr.selected td { background: var(--primary-light); }
+
+    .row-id  { font-size: 12px; color: var(--text-3); font-weight: 600; }
+    .row-ts  { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+    .row-jd  { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+    .chip { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .chip-high { background: var(--success-light); color: #065F46; }
+    .chip-mid  { background: var(--warning-light);  color: #92400E; }
+    .chip-low  { background: var(--danger-light);   color: #991B1B; }
+    .chip-na   { background: var(--surface); color: var(--text-3); }
+
+    select.status-sel {
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      padding: 5px 10px; font-size: 12px; font-weight: 600; font-family: inherit;
+      background: var(--white); cursor: pointer; transition: border-color .15s; color: var(--text);
+    }
+    select.status-sel:focus { outline: none; border-color: var(--primary); }
+
+    .empty-row td { text-align: center; padding: 64px; color: var(--text-3); }
+    .empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+    /* Drawer */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 300; opacity: 0; pointer-events: none; transition: opacity .25s; backdrop-filter: blur(2px); }
+    .overlay.open { opacity: 1; pointer-events: auto; }
+    .drawer {
+      position: fixed; top: 0; right: 0; width: min(820px,100vw); height: 100vh;
+      background: var(--white); z-index: 400; display: flex; flex-direction: column;
+      transform: translateX(105%); transition: transform .3s cubic-bezier(.4,0,.2,1);
+      box-shadow: -8px 0 40px rgba(0,0,0,.12);
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-top { flex-shrink: 0; }
+    .drawer-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 22px 28px 18px; border-bottom: 1px solid var(--border); gap: 16px; }
+    .drawer-title { font-size: 17px; font-weight: 700; }
+    .drawer-ts { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+    .close-btn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--white); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; color: var(--text-2); }
+    .close-btn:hover { background: var(--surface); color: var(--text); }
+    .drawer-scores { display: flex; gap: 0; border-bottom: 1px solid var(--border); }
+    .dscore { flex: 1; padding: 14px 22px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+    .dscore:last-child { border-right: none; }
+    .dscore-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); }
+    .dscore-num   { font-size: 26px; font-weight: 800; line-height: 1; }
+    .dscore-track { height: 4px; background: var(--border); border-radius: 999px; overflow: hidden; }
+    .dscore-fill  { height: 100%; border-radius: 999px; }
+    .drawer-tabs { display: flex; gap: 4px; padding: 14px 22px; border-bottom: 1px solid var(--border); overflow-x: auto; flex-shrink: 0; }
+    .dtab { padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 7px; color: var(--text-2); background: none; border: none; font-family: inherit; white-space: nowrap; transition: all .15s; }
+    .dtab.active { background: var(--primary-light); color: var(--primary); }
+    .dtab:hover:not(.active) { background: var(--surface); }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 22px 28px; }
+    .dpanel { display: none; flex-direction: column; gap: 14px; }
+    .dpanel.active { display: flex; }
+
+    /* Search */
+    .search-wrap { display: flex; gap: 8px; flex-wrap: wrap; }
+    .search-box {
+      padding: 9px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 13px; font-family: inherit; color: var(--text); background: var(--white);
+      width: 280px; transition: border-color .15s, box-shadow .15s;
+    }
+    .search-box:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,.1); }
+    .status-filter {
+      padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 13px; font-family: inherit; font-weight: 500; color: var(--text);
+      background: var(--white); cursor: pointer;
+    }
+    .status-filter:focus { outline: none; border-color: var(--primary); }
+
+    /* Mobile sidebar */
+    .hamburger {
+      display: none; position: fixed; top: 14px; left: 14px; z-index: 500;
+      width: 40px; height: 40px; border-radius: var(--radius-sm);
+      background: var(--white); border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm); cursor: pointer;
+      align-items: center; justify-content: center; font-size: 18px;
+    }
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.3);
+      z-index: 190; backdrop-filter: blur(2px);
+    }
+    .sidebar-overlay.open { display: block; }
+
+    @media (max-width: 900px) {
+      .hamburger { display: flex; }
+      .sidebar { transform: translateX(-100%); transition: transform .25s; }
+      .sidebar.open { transform: translateX(0); }
+    }
+
+    @media (max-width: 680px) { .drawer { width: 100vw; } }
+  </style>
+</head>
+<body>
+
+<button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar" id="mainSidebar">
+  <a class="sidebar-logo" href="/">
+    <div class="sidebar-logo-icon">📄</div>
+    ResumeTailor
+  </a>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Workspace</div>
+    <a href="/" class="sidebar-link">
+      <span class="icon">✨</span> Tailor Resume
+    </a>
+    <a href="/history-page" class="sidebar-link active">
+      <span class="icon">🕓</span> History
+    </a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Tools</div>
+    <div class="sidebar-link">
+      <span class="icon">🤖</span> ATS Scanner
+    </div>
+    <div class="sidebar-link">
+      <span class="icon">💌</span> Cover Letter
+    </div>
+    <div class="sidebar-link">
+      <span class="icon">🔀</span> Before / After
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-link" style="color:var(--primary);font-weight:600;">
+      <span class="icon">⭐</span> Upgrade to Pro
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+<div class="page">
+  <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+    <div>
+      <div class="page-title">Application History</div>
+      <div class="page-sub">Click any row to view details, diff, and agent feedback</div>
+    </div>
+    <div class="search-wrap">
+      <input type="text" id="searchInput" class="search-box" placeholder="🔍  Search by company, title, or JD…" oninput="onSearch()">
+      <select id="statusFilter" class="status-filter" onchange="onSearch()">
+        <option value="">All statuses</option>
+        <option value="Draft">Draft</option>
+        <option value="Applied">Applied</option>
+        <option value="Interviewing">Interviewing</option>
+        <option value="Rejected">Rejected</option>
+        <option value="Offer">Offer</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Company</th>
+          <th>Role</th>
+          <th>ATS</th>
+          <th>Score</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="histBody">
+        <tr class="empty-row"><td colspan="8"><div class="empty-icon">⏳</div>Loading…</td></tr>
+      </tbody>
+    </table>
+    <div class="pagination" id="pagination" style="display:none;">
+      <span class="pagination-info" id="paginationInfo"></span>
+      <button class="btn btn-ghost btn-sm" id="prevBtn" onclick="changePage(-1)">← Prev</button>
+      <button class="btn btn-ghost btn-sm" id="nextBtn" onclick="changePage(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay + Drawer -->
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+
+<div class="drawer" id="drawer">
+  <div class="drawer-top">
+    <div class="drawer-head">
+      <div>
+        <div class="drawer-title" id="dTitle">Detail</div>
+        <div class="drawer-ts" id="dMeta"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-ghost btn-sm" id="retailorBtn" onclick="retailor()">✨ Re-tailor</button>
+        <button class="btn btn-danger btn-sm" id="deleteBtn" onclick="deleteRecord()">🗑 Delete</button>
+        <button class="close-btn" onclick="closeDrawer()">✕</button>
+      </div>
+    </div>
+    <div class="drawer-scores" id="dScores"></div>
+    <div class="drawer-tabs">
+      <button class="dtab active" onclick="switchDTab('diff')">🔀 Before / After</button>
+      <button class="dtab" onclick="switchDTab('cover')">💌 Cover Letter</button>
+      <button class="dtab" onclick="switchDTab('ats')">🤖 ATS Report</button>
+      <button class="dtab" onclick="switchDTab('feedback')">💬 Agent Feedback</button>
+      <button class="dtab" onclick="switchDTab('jd')">💼 Job Description</button>
+      <button class="dtab" onclick="switchDTab('notes')">📝 Notes</button>
+    </div>
+  </div>
+
+  <div class="drawer-body">
+    <div class="dpanel active" id="dpanel-diff">
+      <div class="diff-cols">
+        <div>
+          <div class="diff-col-head before">✕ Original</div>
+          <div class="diff-box" id="dDiffBefore"></div>
+        </div>
+        <div>
+          <div class="diff-col-head after">✓ Tailored</div>
+          <div class="diff-box" id="dDiffAfter"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost btn-sm" onclick="copyToClipboard(document.getElementById('dDiffAfter').textContent,'fbDiff')">Copy Tailored</button>
+        <button class="btn btn-ghost btn-sm" onclick="downloadPDFContent(document.getElementById('dDiffAfter').textContent,'Tailored_Resume')">⬇ PDF</button>
+        <span class="copy-fb" id="fbDiff"></span>
+      </div>
+    </div>
+
+    <div class="dpanel" id="dpanel-cover">
+      <div class="content-box" id="dCover"></div>
+      <div class="btn-row">
+        <button class="btn btn-ghost btn-sm" onclick="copyToClipboard(document.getElementById('dCover').textContent,'fbCover')">Copy</button>
+        <button class="btn btn-ghost btn-sm" onclick="downloadPDFContent(document.getElementById('dCover').textContent,'Cover_Letter')">⬇ PDF</button>
+        <span class="copy-fb" id="fbCover"></span>
+      </div>
+    </div>
+
+    <div class="dpanel" id="dpanel-ats">
+      <div id="dATS"></div>
+    </div>
+
+    <div class="dpanel" id="dpanel-feedback">
+      <div id="dFeedback"></div>
+    </div>
+
+    <div class="dpanel" id="dpanel-jd">
+      <div class="content-box" id="dJD"></div>
+    </div>
+
+    <div class="dpanel" id="dpanel-notes">
+      <p style="font-size:13px;color:var(--text-2);margin-bottom:10px;">Notes are saved automatically when you click outside the text area.</p>
+      <textarea id="dNotes" style="width:100%;min-height:200px;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:13px;font-family:inherit;line-height:1.65;resize:vertical;color:var(--text);background:var(--surface);" placeholder="Interview date, recruiter name, next steps, impressions…" onblur="saveNotes()"></textarea>
+      <div style="font-size:12px;color:var(--text-3);margin-top:6px;" id="notesSaved"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+  const PAGE_SIZE = 50;
+  let currentPage = 0;
+  let totalRecords = 0;
+  let records = [];
+  let filteredRecords = [];
+  let openRecordId = null;
+
+  function chipClass(n) {
+    if (!n && n !== 0) return 'chip-na';
+    if (n >= 75) return 'chip-high';
+    if (n >= 50) return 'chip-mid';
+    return 'chip-low';
+  }
+
+  function scoreTierLabel(s) {
+    if (s >= 85) return '<span style="font-size:11px;font-weight:700;color:#065F46;background:#D1FAE5;padding:2px 8px;border-radius:999px;">Strong</span>';
+    if (s >= 70) return '<span style="font-size:11px;font-weight:700;color:#166534;background:#DCFCE7;padding:2px 8px;border-radius:999px;">Competitive</span>';
+    if (s >= 50) return '<span style="font-size:11px;font-weight:700;color:#92400E;background:#FEF3C7;padding:2px 8px;border-radius:999px;">Fair</span>';
+    return '<span style="font-size:11px;font-weight:700;color:#991B1B;background:#FEE2E2;padding:2px 8px;border-radius:999px;">Weak</span>';
+  }
+
+  const STATUSES = ['Draft','Applied','Interviewing','Rejected','Offer'];
+
+  async function load(page = 0) {
+    currentPage = page;
+    const offset = page * PAGE_SIZE;
+    const res = await fetch(`/history?limit=${PAGE_SIZE}&offset=${offset}`);
+    const data = await res.json();
+    totalRecords = data.total;
+    records = data.items;
+    renderTable(records, offset);
+  }
+
+  function onSearch() {
+    const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+    const st = document.getElementById('statusFilter')?.value || '';
+    filteredRecords = records.filter(r => {
+      const matchQ = !q || (r.company_name||'').toLowerCase().includes(q)
+        || (r.job_title||'').toLowerCase().includes(q)
+        || (r.job_description||'').toLowerCase().includes(q);
+      const matchS = !st || r.status === st;
+      return matchQ && matchS;
+    });
+    renderTable(filteredRecords, 0);
+  }
+
+  function renderTable(rows, offset) {
+    const tbody = document.getElementById('histBody');
+    if (!rows.length) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div class="empty-icon">📭</div><a href="/" style="color:var(--primary);font-weight:600;">No history yet — go tailor a resume!</a></td></tr>`;
+      document.getElementById('pagination').style.display = 'none';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => `
+      <tr onclick="openDrawer(${r.id})" data-id="${r.id}">
+        <td class="row-id">#${r.id}</td>
+        <td class="row-ts">${fmtDate(r.timestamp)}</td>
+        <td style="font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.company_name||'—')}</td>
+        <td class="row-jd" title="${esc(r.job_title||r.job_description)}">${esc(r.job_title||r.job_description.slice(0,80))}</td>
+        <td><span class="chip ${chipClass(r.ats_report?.score)}">${r.ats_report?.score ?? '—'}</span></td>
+        <td style="white-space:nowrap;">${scoreTierLabel(r.final_score)}&nbsp;<span style="font-weight:700;">${r.final_score}</span></td>
+        <td onclick="event.stopPropagation()">
+          <select class="status-sel" data-id="${r.id}" onchange="patchStatus(this)">
+            ${STATUSES.map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </td>
+        <td onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-sm" onclick="confirmDelete(${r.id})" title="Delete">🗑</button>
+        </td>
+      </tr>
+    `).join('');
+
+    const pag = document.getElementById('pagination');
+    if (totalRecords > PAGE_SIZE && !document.getElementById('searchInput')?.value) {
+      const totalPages = Math.ceil(totalRecords / PAGE_SIZE);
+      pag.style.display = 'flex';
+      document.getElementById('paginationInfo').textContent =
+        `Showing ${offset + 1}–${Math.min(offset + rows.length, totalRecords)} of ${totalRecords}`;
+      document.getElementById('prevBtn').disabled = currentPage === 0;
+      document.getElementById('nextBtn').disabled = currentPage >= totalPages - 1;
+    } else {
+      pag.style.display = 'none';
+    }
+  }
+
+  function changePage(dir) { load(currentPage + dir); }
+
+  async function patchStatus(sel) {
+    await fetch(`/history/${sel.dataset.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: sel.value }),
+    });
+  }
+
+  async function saveNotes() {
+    if (!openRecordId) return;
+    const notes = document.getElementById('dNotes').value;
+    const res = await fetch(`/history/${openRecordId}/notes`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes }),
+    });
+    const saved = document.getElementById('notesSaved');
+    saved.textContent = res.ok ? 'Saved ✓' : 'Save failed';
+    setTimeout(() => { saved.textContent = ''; }, 2000);
+    if (res.ok) {
+      const r = records.find(x => x.id === openRecordId);
+      if (r) r.notes = notes;
+    }
+  }
+
+  function retailor() {
+    if (!openRecordId) return;
+    const r = records.find(x => x.id === openRecordId);
+    if (!r) return;
+    localStorage.setItem('retailor', JSON.stringify({
+      resume: r.raw_resume,
+      jd: r.job_description,
+    }));
+    window.location.href = '/';
+  }
+
+  async function confirmDelete(id) {
+    if (!confirm(`Delete record #${id}? This cannot be undone.`)) return;
+    const res = await fetch(`/history/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      if (openRecordId === id) closeDrawer();
+      load(currentPage);
+    } else {
+      alert('Delete failed');
+    }
+  }
+
+  async function deleteRecord() {
+    if (openRecordId) await confirmDelete(openRecordId);
+  }
+
+  function openDrawer(id) {
+    const r = records.find(x => x.id === id);
+    if (!r) return;
+    openRecordId = id;
+
+    document.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('selected'));
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    if (row) row.classList.add('selected');
+
+    const company = r.company_name ? ` — ${r.company_name}` : '';
+    const role    = r.job_title    ? ` · ${r.job_title}` : '';
+    document.getElementById('dTitle').textContent = `Application #${r.id}${company}`;
+    document.getElementById('dMeta').textContent  = fmtDate(r.timestamp) + role + ' · ' + r.status;
+
+    const atsScore = r.ats_report?.score || 0;
+    const missing  = (r.ats_report?.missing_keywords || []).length;
+    document.getElementById('dScores').innerHTML = `
+      <div class="dscore">
+        <div class="dscore-label">ATS Score</div>
+        <div class="dscore-num" style="color:${scoreColor(atsScore)};">${atsScore}</div>
+        <div class="dscore-track"><div class="dscore-fill" style="width:${atsScore}%;background:${scoreColor(atsScore)};"></div></div>
+      </div>
+      <div class="dscore">
+        <div class="dscore-label">Final Score</div>
+        <div class="dscore-num" style="color:${scoreColor(r.final_score)};">${r.final_score}</div>
+        <div class="dscore-track"><div class="dscore-fill" style="width:${r.final_score}%;background:${scoreColor(r.final_score)};"></div></div>
+      </div>
+      <div class="dscore">
+        <div class="dscore-label">Missing Keywords</div>
+        <div class="dscore-num" style="color:${missing>5?'var(--danger)':missing>0?'var(--warning)':'var(--success)'};">${missing}</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:4px;">${missing===0?'Full coverage ✅':'term(s) to add'}</div>
+      </div>`;
+
+    renderDiff(r.raw_resume, r.tailored_resume, 'dDiffBefore', 'dDiffAfter');
+    document.getElementById('dCover').textContent = r.cover_letter || '(not generated)';
+    renderATSPanel(r.ats_report, 'dATS');
+    renderFeedbackPanel(r.recruiter_feedback, r.hiring_manager_feedback, 'dFeedback');
+    document.getElementById('dJD').textContent = r.job_description;
+    document.getElementById('dNotes').value = r.notes || '';
+    document.getElementById('notesSaved').textContent = '';
+
+    switchDTab('diff');
+    document.getElementById('overlay').classList.add('open');
+    document.getElementById('drawer').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDrawer() {
+    openRecordId = null;
+    document.getElementById('overlay').classList.remove('open');
+    document.getElementById('drawer').classList.remove('open');
+    document.body.style.overflow = '';
+    document.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('selected'));
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+  function switchDTab(name) {
+    const names = ['diff','cover','ats','feedback','jd','notes'];
+    document.querySelectorAll('.dtab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
+    document.querySelectorAll('.dpanel').forEach(p => p.classList.toggle('active', p.id === 'dpanel-'+name));
+  }
+
+  function toggleSidebar() {
+    document.getElementById('mainSidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('open');
+  }
+
+  load();
+</script>
+</div><!-- /main -->
+</body>
+</html>
