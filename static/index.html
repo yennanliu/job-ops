@@ -667,6 +667,37 @@
     <div class="tab-panel" id="panel-feedback">
       <div id="feedbackOutput"><div class="empty-panel"><div class="eicon">💬</div><p>Agent feedback will appear after processing…</p></div></div>
     </div>
+
+    <div class="tab-panel" id="panel-ideal">
+      <div id="idealControls" style="display:none;margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" id="genIdealBtn" onclick="generateIdeal()">🏆 Generate Ideal Resume</button>
+        <button class="btn btn-ghost btn-sm" id="dlIdealBtn" onclick="dlIdeal()" style="display:none;">⬇ PDF</button>
+        <button class="btn btn-ghost btn-sm" id="cmpIdealBtn" onclick="switchTab('ideal-diff')" style="display:none;">🔀 Compare with Tailored</button>
+        <span class="copy-fb" id="idealStatus" style="font-size:12px;color:var(--text-3);"></span>
+      </div>
+      <div id="idealEmptyHint"><div class="empty-panel"><div class="eicon">🏆</div><p>Tailor your resume first, then generate an ideal candidate resume for comparison.</p></div></div>
+      <div id="idealOutput" style="display:none;">
+        <div style="display:flex;gap:14px;flex-direction:column;">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Ideal Candidate Resume (based on JD)</div>
+            <div class="content-box" id="idealResumeBox"></div>
+          </div>
+          <div id="idealDiffSection" style="display:none;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Side-by-Side Comparison</div>
+            <div class="diff-cols">
+              <div>
+                <div class="diff-col-head after">✓ Your Tailored Resume</div>
+                <div class="diff-box" id="idealDiffLeft"></div>
+              </div>
+              <div>
+                <div class="diff-col-head" style="background:linear-gradient(90deg,#FEF3C7,#FDE68A);color:#92400E;">🏆 Ideal Candidate</div>
+                <div class="diff-box" id="idealDiffRight"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   </div><!-- /page-content -->
@@ -812,6 +843,8 @@
   };
 
   let _lastResult = null;
+  let _iterResumes = [];   // [{iteration, resume}] for multi-iteration PDF downloads
+  let _idealResume = null; // cached ideal resume text
 
   // ── Pipeline helpers ──
   function pipeReset() {
@@ -939,9 +972,13 @@ Requirements:
   }
 
   function switchTab(name) {
-    const names = ['resume','diff','cover','ats','feedback'];
+    const names = ['resume','diff','cover','ats','feedback','ideal'];
     document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', names[i] === name));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+    // Show compare diff inline when switching to ideal after both are ready
+    if (name === 'ideal' && _idealResume && _lastResult) {
+      document.getElementById('idealDiffSection').style.display = '';
+    }
   }
 
   // ── Client-side validation ──
@@ -1007,6 +1044,11 @@ Requirements:
         box.textContent = data.tailored_resume;
         box.classList.remove('empty');
         renderDiff(document.getElementById('resumeInput').value, data.tailored_resume, 'diffBefore', 'diffAfter');
+        // Track per-iteration resume for individual PDF downloads
+        if (data.iteration) {
+          _iterResumes = _iterResumes.filter(r => r.iteration !== data.iteration);
+          _iterResumes.push({ iteration: data.iteration, resume: data.tailored_resume });
+        }
       }
     } else if (key === 'write_cover_letter') {
       if (data.cover_letter) {
@@ -1059,6 +1101,27 @@ Requirements:
     dlC.style.display = '';
     dlR.disabled = false;
     dlC.disabled = false;
+
+    // Show per-iteration PDF download buttons
+    const iterRow = document.getElementById('iterPdfsRow');
+    const iterBtns = document.getElementById('iterPdfBtns');
+    if (_iterResumes.length > 1) {
+      iterBtns.innerHTML = _iterResumes
+        .sort((a, b) => a.iteration - b.iteration)
+        .map(r => `<button class="btn btn-ghost btn-sm" onclick="openPDFModal(${JSON.stringify(r.resume)}, 'Resume_Iter_${r.iteration}')">⬇ Iter ${r.iteration} PDF</button>`)
+        .join('');
+      iterRow.style.display = '';
+    } else {
+      iterRow.style.display = 'none';
+    }
+
+    // Enable ideal resume tab controls
+    document.getElementById('idealEmptyHint').style.display = 'none';
+    document.getElementById('idealControls').style.display = 'flex';
+    _idealResume = null;
+    document.getElementById('idealOutput').style.display = 'none';
+    document.getElementById('dlIdealBtn').style.display = 'none';
+    document.getElementById('idealStatus').textContent = '';
   }
 
   // ── PDF options modal ──
@@ -1121,9 +1184,12 @@ Requirements:
     document.getElementById('tailorBtn').disabled = true;
     document.getElementById('dlResumeBtn').style.display = 'none';
     document.getElementById('dlCoverBtn').style.display  = 'none';
+    document.getElementById('iterPdfsRow').style.display = 'none';
     setStatus('running', 'Tailoring your resume…');
     pipeStart();
     _lastResult = null;
+    _iterResumes = [];
+    _idealResume = null;
 
     try {
       const response = await fetch('/tailor-stream', {
@@ -1208,7 +1274,16 @@ Requirements:
     if (tier) { tier.textContent = ''; tier.className = 'score-tier'; }
     document.getElementById('dlResumeBtn').style.display = 'none';
     document.getElementById('dlCoverBtn').style.display  = 'none';
+    document.getElementById('iterPdfsRow').style.display = 'none';
+    document.getElementById('iterPdfBtns').innerHTML = '';
+    document.getElementById('idealControls').style.display = 'none';
+    document.getElementById('idealEmptyHint').style.display = '';
+    document.getElementById('idealOutput').style.display = 'none';
+    document.getElementById('idealDiffSection').style.display = 'none';
+    document.getElementById('idealStatus').textContent = '';
     _lastResult = null;
+    _iterResumes = [];
+    _idealResume = null;
     setStatus('', 'Ready');
     pipeReset();
     switchTab('resume');
@@ -1352,6 +1427,53 @@ Requirements:
     el.closest('.seg-ctrl').querySelectorAll('.seg').forEach(s => s.classList.remove('active'));
     el.classList.add('active');
     document.getElementById(hiddenId).value = el.dataset.val;
+  }
+
+  // ── Ideal Resume ──
+  async function generateIdeal() {
+    const jd = document.getElementById('jdInput').value.trim();
+    if (!jd) return;
+
+    const btn = document.getElementById('genIdealBtn');
+    const statusEl = document.getElementById('idealStatus');
+    btn.disabled = true;
+    statusEl.textContent = 'Generating…';
+
+    try {
+      const res = await fetch('/ideal-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_description: jd }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || `Error ${res.status}`); }
+      const data = await res.json();
+      _idealResume = data.ideal_resume;
+
+      // Populate ideal resume box
+      const box = document.getElementById('idealResumeBox');
+      box.textContent = _idealResume;
+      box.classList.remove('empty');
+      document.getElementById('idealOutput').style.display = '';
+
+      // Show diff vs tailored if available
+      if (_lastResult?.tailored_resume) {
+        renderDiff(_lastResult.tailored_resume, _idealResume, 'idealDiffLeft', 'idealDiffRight');
+        document.getElementById('idealDiffSection').style.display = '';
+      }
+
+      document.getElementById('dlIdealBtn').style.display = '';
+      statusEl.textContent = 'Generated!';
+      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+    } catch (err) {
+      statusEl.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function dlIdeal() {
+    if (!_idealResume) return;
+    openPDFModal(_idealResume, 'Ideal_Resume');
   }
 </script>
 </body>
