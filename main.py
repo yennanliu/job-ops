@@ -20,6 +20,7 @@ from slowapi.util import get_remote_address
 from agent.config import get_settings
 from agent.designer import parse_resume_structure
 from agent.graph import resume_agent
+from agent.prompts import IDEAL_RESUME_WRITER
 from db import delete_record, get_all_records, init_db, insert_record, update_notes, update_status
 
 
@@ -263,6 +264,10 @@ class StatusUpdate(BaseModel):
 
 class NotesUpdate(BaseModel):
     notes: str = Field(default="", max_length=2000)
+
+
+class IdealResumeRequest(BaseModel):
+    job_description: str = Field(..., min_length=50, max_length=12000)
 
 
 class ExportRequest(BaseModel):
@@ -509,6 +514,20 @@ async def dismiss_job(job_id: str):
     job_store._jobs.pop(job_id, None)
     if job_id in job_store._order:
         job_store._order.remove(job_id)
+
+
+@app.post("/ideal-resume", dependencies=[Depends(verify_api_key)])
+async def ideal_resume(body: IdealResumeRequest):
+    """Generate an ideal candidate resume for the given job description."""
+    from agent.nodes import _chat
+    cfg = get_settings()
+    ideal = await _chat(
+        model=cfg.openai_model_writer,
+        system=IDEAL_RESUME_WRITER,
+        user=f"Job Description:\n{body.job_description}",
+        temperature=0.4,
+    )
+    return {"ideal_resume": ideal}
 
 
 @app.post("/export-pdf")

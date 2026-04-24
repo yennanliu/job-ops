@@ -95,6 +95,18 @@ Rules:
 - For skills with no clear categories, use a single entry with category "Skills".
 """
 
+IDEAL_RESUME_WRITER = (
+    "You are an expert resume writer. "
+    "Given a job description, create an ideal example resume for a perfect-fit candidate.\n"
+    "Rules:\n"
+    "- Construct a realistic but entirely fictional candidate who would score 95%+ on ATS for this JD\n"
+    "- Include: professional summary, experience (2–3 roles, last 6–8 years), education, and skills\n"
+    "- Every bullet point must directly address a JD requirement; use the JD's exact terminology\n"
+    "- Use realistic fictional names for the candidate, companies, and institutions\n"
+    "- Format as clean plain-text resume (same structure as a real resume)\n"
+    "- Output the complete example resume only — no commentary, no labels like 'Ideal Candidate:'"
+)
+
 HIRING_MANAGER = (
     "You are a hiring manager evaluating a candidate's resume against a job description. "
     "You care about technical depth and real-world fit.\n"
