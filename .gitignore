@@ -1,1 +1,6 @@
 ref_code
+.env
+__pycache__/
+agent/__pycache__/
+history.db
+history.db*
