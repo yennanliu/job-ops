@@ -116,7 +116,7 @@ async function downloadPDFContent(content, title, pdfOpts = {}) {
     page_size:    pdfOpts.page_size    || 'A4',
     margin:       pdfOpts.margin       || 'normal',
     font_scale:   pdfOpts.font_scale   || 1.0,
-    accent_color: pdfOpts.accent_color || '#4F46E5',
+    accent_color: pdfOpts.accent_color || '#0071E3',
     max_pages:    pdfOpts.max_pages    || 0,
   };
   const res = await fetch('/export-pdf', {

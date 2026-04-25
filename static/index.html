@@ -22,7 +22,7 @@
       padding: 14px; font-size: 13px; font-family: inherit; line-height: 1.65; resize: vertical;
       transition: border-color .2s, box-shadow .2s; color: var(--text); background: var(--surface);
     }
-    textarea:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(79,70,229,.1); background: var(--white); }
+    textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,113,227,.12); background: var(--white); }
     textarea::placeholder { color: var(--text-3); }
     textarea.invalid { border-color: var(--danger); }
     .char-hint { font-size: 11px; color: var(--text-3); text-align: right; }
@@ -135,15 +135,15 @@
       appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239CA3AF' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
       background-repeat: no-repeat; background-position: right 12px center;
     }
-    .inline-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,.1); }
+    .inline-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,113,227,.12); }
 
     /* Inline text input */
     .inline-input {
-      width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
       font-size: 13px; font-family: inherit; color: var(--text); background: var(--surface);
       transition: border-color .15s, box-shadow .15s; margin-top: 8px;
     }
-    .inline-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,.1); background: var(--white); }
+    .inline-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,113,227,.12); background: var(--white); }
     .inline-input::placeholder { color: var(--text-3); }
 
     /* Chip row */
@@ -153,7 +153,7 @@
       border: 1.5px solid var(--border); background: var(--surface); color: var(--text-2);
       cursor: pointer; transition: all .15s; font-family: inherit;
     }
-    .chip-btn:hover { background: var(--primary-light); color: var(--primary); border-color: rgba(124,58,237,.3); }
+    .chip-btn:hover { background: var(--primary-light); color: var(--primary); border-color: rgba(0,113,227,.2); }
 
     /* Secondary button */
     .btn-secondary {
@@ -193,57 +193,11 @@
     .iter-progress-label { font-size: 12px; font-weight: 700; color: var(--primary); white-space: nowrap; }
     .iter-progress-dots { display: flex; gap: 5px; align-items: center; }
 
-    /* Jobs panel */
-    .jobs-panel {
-      position: fixed; right: 0; top: 0; height: 100vh; width: 380px;
-      background: var(--white); z-index: 600;
-      box-shadow: -8px 0 40px rgba(0,0,0,.12);
-      display: flex; flex-direction: column;
-      transform: translateX(105%); transition: transform .3s cubic-bezier(.4,0,.2,1);
-    }
-    .jobs-panel.open { transform: translateX(0); }
-    .jobs-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.25);
-      z-index: 590; backdrop-filter: blur(2px);
-    }
-    .jobs-overlay.open { display: block; }
-    .jobs-panel-head {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 20px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-    }
-    .jobs-list { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-    .jobs-empty { font-size: 13px; color: var(--text-3); text-align: center; padding: 40px 0; }
+    /* Jobs badge in sidebar */
     .jobs-badge {
       margin-left: auto; background: var(--primary); color: #fff;
-      font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
+      font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px;
     }
-
-    /* Job card */
-    .job-card {
-      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
-      padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;
-      transition: border-color .15s;
-    }
-    .job-card.running { border-color: var(--warning); }
-    .job-card.done    { border-color: var(--primary); }
-    .job-card.failed  { border-color: var(--danger); }
-    .job-card-head { display: flex; align-items: center; gap: 8px; }
-    .job-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .job-status-dot.queued    { background: #9CA3AF; }
-    .job-status-dot.running   { background: var(--warning); animation: pulse 1s infinite; }
-    .job-status-dot.done      { background: var(--primary); }
-    .job-status-dot.failed    { background: var(--danger); }
-    .job-status-dot.cancelled { background: #9CA3AF; }
-    .job-label { font-size: 12px; font-weight: 600; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .job-dismiss { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 13px; padding: 0 2px; }
-    .job-dismiss:hover { color: var(--text); }
-    .job-meta { font-size: 11px; color: var(--text-3); display: flex; gap: 10px; flex-wrap: wrap; }
-    .job-iter-track { height: 4px; background: var(--border); border-radius: 999px; overflow: hidden; }
-    .job-iter-fill  { height: 100%; background: var(--primary); border-radius: 999px; transition: width .4s; }
-    .job-score { font-size: 13px; font-weight: 800; color: var(--primary); }
-    .job-error { font-size: 11px; color: var(--danger); }
-    .job-time  { font-size: 11px; color: var(--text-3); }
-    .job-actions { display: flex; gap: 6px; }
 
     /* Score tier */
     .score-tier {
@@ -342,8 +296,8 @@
       width: 48px; height: 36px; border-radius: 4px;
       border: 1px solid var(--border);
     }
-    .classic-prev { background: linear-gradient(to bottom, #EEF2FF 30%, white 30%); }
-    .modern-prev  { background: linear-gradient(to bottom, #EDE9FE 30%, white 30%); }
+    .classic-prev { background: linear-gradient(to bottom, #E3F0FF 30%, white 30%); }
+    .modern-prev  { background: linear-gradient(to bottom, #E3EEFF 30%, white 30%); }
     .minimal-prev { background: linear-gradient(to bottom, #F3F4F6 30%, white 30%); }
 
     /* Color swatches */
@@ -415,10 +369,10 @@
 
   <div class="sidebar-section">
     <div class="sidebar-section-label">Jobs</div>
-    <div class="sidebar-link" onclick="toggleJobsPanel()" id="jobsSidebarLink">
+    <a href="/jobs-page" class="sidebar-link">
       <span class="icon">⚡</span> Background Jobs
       <span class="jobs-badge" id="jobsBadge" style="display:none;">0</span>
-    </div>
+    </a>
   </div>
 </aside>
 
@@ -578,8 +532,7 @@
 
     <div class="action-bar" style="margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border);">
       <div class="action-bar-left">
-        <button class="btn btn-primary" id="tailorBtn" onclick="tailor()">✨ Tailor Resume</button>
-        <button class="btn btn-secondary" id="queueBtn" onclick="queueJob()" title="Run in background — lets you start another job simultaneously">⚡ Queue as Job</button>
+        <button class="btn btn-primary" id="tailorBtn" onclick="queueAndStream()">✨ Tailor Resume</button>
         <div class="iter-ctrl">
           <span class="iter-label">Iterations</span>
           <div class="seg-ctrl-sm">
@@ -703,17 +656,6 @@
   </div><!-- /page-content -->
 </div><!-- /main -->
 
-<!-- Jobs Panel -->
-<div class="jobs-panel" id="jobsPanel">
-  <div class="jobs-panel-head">
-    <div style="font-size:15px;font-weight:700;">⚡ Background Jobs</div>
-    <button class="modal-close" onclick="toggleJobsPanel()">✕</button>
-  </div>
-  <div class="jobs-list" id="jobsList">
-    <div class="jobs-empty">No jobs yet. Click "Queue as Job" to run in the background.</div>
-  </div>
-</div>
-<div class="jobs-overlay" id="jobsOverlay" onclick="toggleJobsPanel()"></div>
 
 <!-- PDF Options Modal -->
 <div class="modal-backdrop" id="pdfModal" onclick="if(event.target===this)closePDFModal()">
@@ -748,14 +690,14 @@
         <div class="opt-block">
           <label class="opt-label">Accent Color</label>
           <div class="color-swatches">
-            <div class="swatch active" data-color="#4F46E5" style="background:#4F46E5" onclick="selectColor(this)" title="Indigo"></div>
-            <div class="swatch" data-color="#7C3AED" style="background:#7C3AED" onclick="selectColor(this)" title="Violet"></div>
+            <div class="swatch active" data-color="#0071E3" style="background:#0071E3" onclick="selectColor(this)" title="Blue"></div>
+            <div class="swatch" data-color="#4F46E5" style="background:#4F46E5" onclick="selectColor(this)" title="Indigo"></div>
             <div class="swatch" data-color="#0F766E" style="background:#0F766E" onclick="selectColor(this)" title="Teal"></div>
             <div class="swatch" data-color="#B45309" style="background:#B45309" onclick="selectColor(this)" title="Amber"></div>
             <div class="swatch" data-color="#DC2626" style="background:#DC2626" onclick="selectColor(this)" title="Crimson"></div>
             <div class="swatch" data-color="#1D4ED8" style="background:#1D4ED8" onclick="selectColor(this)" title="Blue"></div>
             <div class="swatch swatch-custom" title="Custom">
-              <input type="color" id="pdfAccentColor" value="#4F46E5" oninput="syncCustomColor(this)">
+              <input type="color" id="pdfAccentColor" value="#0071E3" oninput="syncCustomColor(this)">
             </div>
           </div>
         </div>
@@ -1169,8 +1111,8 @@ Requirements:
     openPDFModal(_lastResult.cover_letter, 'Cover_Letter');
   }
 
-  // ── Main tailor ──
-  async function tailor() {
+  // ── Queue job + stream its events live into the pipeline ──
+  async function queueAndStream() {
     const resume   = document.getElementById('resumeInput').value.trim();
     const jd       = document.getElementById('jdInput').value.trim();
     const mats     = document.getElementById('materialsInput').value.trim();
@@ -1181,18 +1123,20 @@ Requirements:
 
     if (!validateInputs(resume, jd)) return;
 
-    document.getElementById('tailorBtn').disabled = true;
+    const btn = document.getElementById('tailorBtn');
+    btn.disabled = true;
     document.getElementById('dlResumeBtn').style.display = 'none';
     document.getElementById('dlCoverBtn').style.display  = 'none';
     document.getElementById('iterPdfsRow').style.display = 'none';
-    setStatus('running', 'Tailoring your resume…');
+    setStatus('running', 'Queuing job…');
     pipeStart();
     _lastResult = null;
     _iterResumes = [];
     _idealResume = null;
 
     try {
-      const response = await fetch('/tailor-stream', {
+      // Step 1: create background job
+      const res = await fetch('/tailor-job', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1203,11 +1147,16 @@ Requirements:
           iterations: iters,
         }),
       });
-      if (!response.ok) {
-        const e = await response.json().catch(() => ({}));
-        throw new Error(e.detail || `Error ${response.status}`);
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.detail || `Error ${res.status}`);
       }
+      const job = await res.json();
+      setStatus('running', 'Job queued — running…');
+      updateJobsBadge();
 
+      // Step 2: stream from job SSE endpoint
+      const response = await fetch(`/jobs/${job.job_id}/stream`);
       const reader = response.body.getReader();
       const dec = new TextDecoder();
       let buf = '';
@@ -1226,11 +1175,12 @@ Requirements:
             if (line.startsWith('data: '))  dataStr = line.slice(6).trim();
           }
           if (!dataStr) continue;
+          if (evt === 'ping') continue;
           const data = JSON.parse(dataStr);
           if      (evt === 'node')            onNodeEvent(data);
           else if (evt === 'iteration_start') onIterStart(data);
           else if (evt === 'iteration_done')  onIterDone(data);
-          else if (evt === 'done')            { renderResult(data); setStatus('done', 'Done! Review your results below.'); }
+          else if (evt === 'done')            { renderResult(data); setStatus('done', 'Done! Review your results below.'); updateJobsBadge(); }
           else if (evt === 'error')           throw new Error(data.message || 'Unknown error');
         }
       }
@@ -1241,8 +1191,18 @@ Requirements:
       });
       setStatus('error', err.message);
     } finally {
-      document.getElementById('tailorBtn').disabled = false;
+      btn.disabled = false;
     }
+  }
+
+  async function updateJobsBadge() {
+    try {
+      const res = await fetch('/jobs');
+      if (!res.ok) return;
+      const jobs = await res.json();
+      const badge = document.getElementById('jobsBadge');
+      if (badge) { badge.textContent = jobs.length; badge.style.display = jobs.length ? '' : 'none'; }
+    } catch(e) {}
   }
 
   function clearAll() {
@@ -1294,114 +1254,6 @@ Requirements:
     document.querySelectorAll('.seg-sm').forEach(s => s.classList.remove('active'));
     el.classList.add('active');
     document.getElementById('iterCount').value = el.dataset.val;
-  }
-
-  // ── Jobs panel state ──
-  let _jobsPollTimer = null;
-  let _jobStreams = {};  // jobId -> EventSource
-
-  function toggleJobsPanel() {
-    const panel   = document.getElementById('jobsPanel');
-    const overlay = document.getElementById('jobsOverlay');
-    const open    = panel.classList.toggle('open');
-    overlay.classList.toggle('open', open);
-    if (open) {
-      refreshJobs();
-      _jobsPollTimer = setInterval(refreshJobs, 3000);
-    } else {
-      clearInterval(_jobsPollTimer);
-      _jobsPollTimer = null;
-    }
-  }
-
-  async function refreshJobs() {
-    try {
-      const res = await fetch('/jobs');
-      if (!res.ok) return;
-      const jobs = await res.json();
-      renderJobsList(jobs);
-      // Update badge
-      const running = jobs.filter(j => j.status === 'running' || j.status === 'queued').length;
-      const badge = document.getElementById('jobsBadge');
-      if (badge) { badge.textContent = jobs.length; badge.style.display = jobs.length ? '' : 'none'; }
-    } catch(e) {}
-  }
-
-  function renderJobsList(jobs) {
-    const list = document.getElementById('jobsList');
-    if (!jobs.length) {
-      list.innerHTML = '<div class="jobs-empty">No jobs yet. Click "Queue as Job" to run in the background.</div>';
-      return;
-    }
-    list.innerHTML = jobs.map(job => {
-      const statusIcon = { queued: '⏳', running: '⚡', done: '✅', error: '❌' }[job.status] || '❓';
-      const scoreHtml  = job.status === 'done' ? `<span class="job-score">${job.final_score}/100</span>` : '';
-      const iterDots   = job.iterations > 1
-        ? `<div class="iter-dots">${Array.from({length: job.iterations}, (_, i) => {
-            const cls = i < job.current_iter ? 'iter-dot done' : (i === job.current_iter && job.status === 'running' ? 'iter-dot active' : 'iter-dot');
-            return `<span class="${cls}"></span>`;
-          }).join('')}</div>`
-        : '';
-      const errHtml = job.error ? `<div class="job-error">${job.error}</div>` : '';
-      return `
-        <div class="job-card" id="jcard-${job.id}">
-          <div class="job-card-head">
-            <span class="job-status-icon">${statusIcon}</span>
-            <span class="job-label" title="${job.label}">${job.label}</span>
-            ${scoreHtml}
-            <button class="job-dismiss" onclick="dismissJob('${job.id}')" title="Remove">✕</button>
-          </div>
-          ${iterDots}
-          ${errHtml}
-          <div class="job-time">${job.created_at ? job.created_at.slice(0,16).replace('T',' ') : ''}</div>
-        </div>`;
-    }).join('');
-  }
-
-  async function queueJob() {
-    const resume   = document.getElementById('resumeInput').value.trim();
-    const jd       = document.getElementById('jdInput').value.trim();
-    const mats     = document.getElementById('materialsInput').value.trim();
-    const clTone   = document.getElementById('clTone')?.value || 'professional';
-    const clLength = document.getElementById('clLength')?.value || 'standard';
-    const clEmph   = document.getElementById('emphasisInput')?.value.trim() || '';
-    const iters    = parseInt(document.getElementById('iterCount').value, 10) || 1;
-
-    if (!validateInputs(resume, jd)) return;
-
-    const btn = document.getElementById('queueBtn');
-    btn.disabled = true;
-    try {
-      const res = await fetch('/tailor-job', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resume, job_description: jd, materials: mats,
-          cover_letter_tone: clTone,
-          cover_letter_length: clLength,
-          cover_letter_emphasis: clEmph,
-          iterations: iters,
-        }),
-      });
-      if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail || `Error ${res.status}`); }
-      const job = await res.json();
-
-      // Open panel and start polling
-      const panel = document.getElementById('jobsPanel');
-      if (!panel.classList.contains('open')) toggleJobsPanel();
-      else refreshJobs();
-    } catch(err) {
-      alert('Failed to queue job: ' + err.message);
-    } finally {
-      btn.disabled = false;
-    }
-  }
-
-  async function dismissJob(id) {
-    try {
-      await fetch('/jobs/' + id, { method: 'DELETE' });
-      refreshJobs();
-    } catch(e) {}
   }
 
   // ── PDF modal helpers ──

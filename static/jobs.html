@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Background Jobs — Resume Tailor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .page { max-width: 1000px; margin: 0 auto; padding: 36px 48px 80px; }
+    .page-header { margin-bottom: 28px; display: flex; align-items: center; justify-content: space-between; }
+    .page-title { font-size: 28px; font-weight: 700; letter-spacing: -.4px; color: var(--text); }
+    .page-sub { font-size: 14px; color: var(--text-2); margin-top: 5px; }
+
+    /* Jobs list */
+    .jobs-grid { display: flex; flex-direction: column; gap: 12px; }
+
+    .job-card {
+      background: #FBFBFD; border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 20px 24px;
+      cursor: pointer; transition: box-shadow .15s, border-color .15s;
+    }
+    .job-card:hover { box-shadow: var(--shadow-md); border-color: #C0C0C6; }
+    .job-card.running { border-color: var(--warning); }
+    .job-card.done    { border-color: var(--border); }
+    .job-card.failed  { border-color: var(--danger); }
+    .job-card.expanded { border-color: var(--primary); }
+
+    .job-card-head { display: flex; align-items: center; gap: 12px; }
+    .job-status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .job-status-dot.queued    { background: #C7C7CC; }
+    .job-status-dot.running   { background: var(--warning); animation: pulse 1s infinite; }
+    .job-status-dot.done      { background: var(--success); }
+    .job-status-dot.failed    { background: var(--danger); }
+    .job-status-dot.cancelled { background: #C7C7CC; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .job-label { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .job-score-chip {
+      font-size: 13px; font-weight: 700; padding: 3px 12px;
+      border-radius: 999px; white-space: nowrap;
+    }
+    .score-high { background: #D1FAE5; color: #065F46; }
+    .score-mid  { background: #FEF3C7; color: #92400E; }
+    .score-low  { background: #FFE5E3; color: #C0392B; }
+
+    .job-status-text {
+      font-size: 12px; font-weight: 500; padding: 3px 10px;
+      border-radius: 999px; white-space: nowrap;
+    }
+    .st-queued    { background: #F5F5F7; color: var(--text-3); }
+    .st-running   { background: #FEF3C7; color: #92400E; }
+    .st-done      { background: #D1FAE5; color: #065F46; }
+    .st-failed    { background: #FFE5E3; color: #C0392B; }
+    .st-cancelled { background: #F5F5F7; color: var(--text-3); }
+
+    .job-meta { display: flex; align-items: center; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+    .job-meta-item { font-size: 12px; color: var(--text-3); display: flex; align-items: center; gap: 5px; }
+
+    /* Iteration progress */
+    .iter-track { height: 4px; background: var(--border); border-radius: 999px; overflow: hidden; margin-top: 10px; }
+    .iter-fill  { height: 100%; background: var(--primary); border-radius: 999px; transition: width .4s; }
+    .iter-dots  { display: flex; gap: 5px; }
+    .iter-dot   { width: 9px; height: 9px; border-radius: 50%; background: var(--border); transition: all .3s; }
+    .iter-dot.done   { background: var(--primary); }
+    .iter-dot.active { background: var(--warning); animation: pulse 1s infinite; }
+
+    .job-error-msg { font-size: 12px; color: var(--danger); margin-top: 6px; }
+
+    /* Dismiss button */
+    .job-dismiss {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-3); font-size: 14px; padding: 2px 4px;
+      border-radius: 4px; transition: color .12s, background .12s;
+      flex-shrink: 0;
+    }
+    .job-dismiss:hover { color: var(--danger); background: var(--danger-light); }
+
+    /* Expandable results */
+    .job-results {
+      display: none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 18px;
+    }
+    .job-results.open { display: block; }
+
+    /* Result tabs */
+    .rtabs { display: flex; gap: 2px; background: var(--surface); padding: 3px; border-radius: var(--radius-sm); border: 1px solid var(--border); width: fit-content; margin-bottom: 14px; }
+    .rtab { padding: 5px 14px; font-size: 12px; font-weight: 500; cursor: pointer; border-radius: 5px; color: var(--text-2); background: none; border: none; font-family: inherit; transition: all .12s; }
+    .rtab.active { background: #FBFBFD; color: var(--primary); box-shadow: var(--shadow-sm); }
+    .rtab:hover:not(.active) { color: var(--text); }
+    .rpanel { display: none; }
+    .rpanel.active { display: block; }
+
+    .result-box {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 14px; font-size: 12.5px; line-height: 1.8; white-space: pre-wrap;
+      max-height: 360px; overflow-y: auto; color: var(--text);
+    }
+
+    .result-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 80px 20px;
+      color: var(--text-3); display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .empty-state .eicon { font-size: 48px; }
+    .empty-state h3 { font-size: 18px; font-weight: 600; color: var(--text-2); }
+    .empty-state p { font-size: 14px; }
+
+    /* Auto-refresh indicator */
+    .refresh-info { font-size: 12px; color: var(--text-3); display: flex; align-items: center; gap: 6px; }
+    .refresh-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
+
+    /* Header bar stats */
+    .stats-bar { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+    .stat-item {
+      background: #FBFBFD; border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 14px 20px; display: flex; flex-direction: column; gap: 3px; min-width: 120px;
+    }
+    .stat-num { font-size: 24px; font-weight: 700; color: var(--text); }
+    .stat-label { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+
+    @media (max-width: 768px) {
+      .page { padding: 20px 16px 60px; }
+      .stats-bar { gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="mainSidebar">
+  <a class="sidebar-logo" href="/">
+    <div class="sidebar-logo-icon">📄</div>
+    ResumeTailor
+  </a>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Workspace</div>
+    <a href="/" class="sidebar-link">
+      <span class="icon">✨</span> Tailor Resume
+    </a>
+    <a href="/history-page" class="sidebar-link">
+      <span class="icon">🕓</span> History
+    </a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Jobs</div>
+    <a href="/jobs-page" class="sidebar-link active">
+      <span class="icon">⚡</span> Background Jobs
+    </a>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="page">
+
+    <div class="page-header">
+      <div>
+        <div class="page-title">Background Jobs</div>
+        <div class="page-sub">Monitor running and completed resume tailoring jobs.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="refresh-info"><div class="refresh-dot"></div> Auto-refreshing</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadJobs()">↻ Refresh</button>
+        <a href="/" class="btn btn-primary btn-sm">+ New Job</a>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar" id="statsBar" style="display:none;">
+      <div class="stat-item">
+        <div class="stat-num" id="statTotal">0</div>
+        <div class="stat-label">Total</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num" id="statRunning" style="color:var(--warning);">0</div>
+        <div class="stat-label">Running</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num" id="statDone" style="color:var(--success);">0</div>
+        <div class="stat-label">Completed</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num" id="statAvgScore">—</div>
+        <div class="stat-label">Avg Score</div>
+      </div>
+    </div>
+
+    <div class="jobs-grid" id="jobsGrid">
+      <div class="empty-state">
+        <div class="eicon">⚡</div>
+        <h3>No jobs yet</h3>
+        <p>Go to <a href="/" style="color:var(--primary);">Tailor Resume</a> to start your first job.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+  let _expandedJob = null;
+
+  async function loadJobs() {
+    try {
+      const res = await fetch('/jobs');
+      if (!res.ok) return;
+      const jobs = await res.json();
+      renderJobs(jobs);
+      renderStats(jobs);
+    } catch(e) {}
+  }
+
+  function renderStats(jobs) {
+    if (!jobs.length) { document.getElementById('statsBar').style.display = 'none'; return; }
+    document.getElementById('statsBar').style.display = '';
+    document.getElementById('statTotal').textContent   = jobs.length;
+    document.getElementById('statRunning').textContent = jobs.filter(j => j.status === 'running' || j.status === 'queued').length;
+    document.getElementById('statDone').textContent    = jobs.filter(j => j.status === 'done').length;
+    const scores = jobs.filter(j => j.final_score > 0).map(j => j.final_score);
+    document.getElementById('statAvgScore').textContent = scores.length
+      ? Math.round(scores.reduce((a,b) => a+b, 0) / scores.length)
+      : '—';
+  }
+
+  function scoreChip(score, status) {
+    if (status !== 'done' || !score) return '';
+    const cls = score >= 75 ? 'score-high' : score >= 50 ? 'score-mid' : 'score-low';
+    return `<span class="job-score-chip ${cls}">${score}/100</span>`;
+  }
+
+  function statusChip(status) {
+    const labels = { queued: 'Queued', running: 'Running', done: 'Done', failed: 'Failed', cancelled: 'Cancelled' };
+    return `<span class="job-status-text st-${status}">${labels[status] || status}</span>`;
+  }
+
+  function iterDotsHtml(job) {
+    if (job.iterations <= 1) return '';
+    return `<div class="iter-dots" style="margin-top:8px;">${Array.from({length: job.iterations}, (_, i) => {
+      const cls = i < job.current_iter ? 'iter-dot done'
+                : (i === job.current_iter && job.status === 'running' ? 'iter-dot active' : 'iter-dot');
+      return `<span class="${cls}"></span>`;
+    }).join('')}</div>`;
+  }
+
+  function renderJobs(jobs) {
+    const grid = document.getElementById('jobsGrid');
+    if (!jobs.length) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="eicon">⚡</div>
+          <h3>No jobs yet</h3>
+          <p>Go to <a href="/" style="color:var(--primary);">Tailor Resume</a> to start your first job.</p>
+        </div>`;
+      return;
+    }
+
+    const currentExpanded = _expandedJob;
+
+    grid.innerHTML = jobs.map(job => {
+      const isExpanded = currentExpanded === job.id && job.status === 'done';
+      return `
+        <div class="job-card ${job.status}${isExpanded ? ' expanded' : ''}" id="jcard-${job.id}" onclick="toggleJob('${job.id}', ${job.status === 'done'})">
+          <div class="job-card-head">
+            <div class="job-status-dot ${job.status}"></div>
+            <div class="job-label" title="${esc(job.label)}">${esc(job.label)}</div>
+            ${scoreChip(job.final_score, job.status)}
+            ${statusChip(job.status)}
+            <button class="job-dismiss" onclick="event.stopPropagation();dismissJob('${job.id}')" title="Remove">✕</button>
+          </div>
+          ${iterDotsHtml(job)}
+          ${job.error ? `<div class="job-error-msg">${esc(job.error)}</div>` : ''}
+          <div class="job-meta">
+            <div class="job-meta-item">🕐 ${job.created_at ? job.created_at.slice(0,16).replace('T',' ') + ' UTC' : ''}</div>
+            ${job.iterations > 1 ? `<div class="job-meta-item">🔄 ${job.iterations} iterations</div>` : ''}
+            ${job.status === 'done' ? '<div class="job-meta-item" style="color:var(--primary);">Click to view results →</div>' : ''}
+          </div>
+          <div class="job-results${isExpanded ? ' open' : ''}" id="jresults-${job.id}" onclick="event.stopPropagation()">
+          </div>
+        </div>`;
+    }).join('');
+
+    // If there was an expanded job and it's done, restore its results
+    if (currentExpanded) {
+      const job = jobs.find(j => j.id === currentExpanded);
+      if (job && job.status === 'done') {
+        loadJobResults(job.id);
+      }
+    }
+  }
+
+  async function toggleJob(jobId, isDone) {
+    if (!isDone) return;
+    if (_expandedJob === jobId) {
+      _expandedJob = null;
+      const resultsEl = document.getElementById(`jresults-${jobId}`);
+      if (resultsEl) resultsEl.classList.remove('open');
+      const card = document.getElementById(`jcard-${jobId}`);
+      if (card) card.classList.remove('expanded');
+      return;
+    }
+    _expandedJob = jobId;
+    const card = document.getElementById(`jcard-${jobId}`);
+    if (card) card.classList.add('expanded');
+    const resultsEl = document.getElementById(`jresults-${jobId}`);
+    if (resultsEl) resultsEl.classList.add('open');
+    await loadJobResults(jobId);
+  }
+
+  async function loadJobResults(jobId) {
+    const resultsEl = document.getElementById(`jresults-${jobId}`);
+    if (!resultsEl) return;
+    resultsEl.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:8px 0;">Loading results…</div>';
+
+    try {
+      const res = await fetch(`/jobs/${jobId}`);
+      if (!res.ok) throw new Error('Not found');
+      const data = await res.json();
+      const r = data.result;
+      if (!r) { resultsEl.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:8px 0;">No results yet.</div>'; return; }
+
+      const atsScore = r.ats_report?.score || 0;
+      const atsColor = atsScore >= 75 ? 'var(--success)' : atsScore >= 50 ? 'var(--warning)' : 'var(--danger)';
+
+      resultsEl.innerHTML = `
+        <div class="rtabs" id="rtabs-${jobId}">
+          <button class="rtab active" onclick="switchRTab('${jobId}','resume',this)">📄 Resume</button>
+          <button class="rtab" onclick="switchRTab('${jobId}','cover',this)">💌 Cover Letter</button>
+          <button class="rtab" onclick="switchRTab('${jobId}','ats',this)">🤖 ATS</button>
+          <button class="rtab" onclick="switchRTab('${jobId}','feedback',this)">💬 Feedback</button>
+        </div>
+
+        <div class="rpanel active" id="rpanel-${jobId}-resume">
+          <div class="result-box" id="rbox-resume-${jobId}">${esc(r.tailored_resume || '')}</div>
+          <div class="result-actions">
+            <button class="btn btn-ghost btn-sm" onclick="copyText('rbox-resume-${jobId}','rfb-resume-${jobId}')">Copy</button>
+            <span class="copy-fb" id="rfb-resume-${jobId}"></span>
+            <button class="btn btn-ghost btn-sm" onclick="openPDFModal(${JSON.stringify(r.tailored_resume || '')}, 'Tailored_Resume')">⬇ PDF</button>
+          </div>
+        </div>
+
+        <div class="rpanel" id="rpanel-${jobId}-cover">
+          <div class="result-box" id="rbox-cover-${jobId}">${esc(r.cover_letter || '')}</div>
+          <div class="result-actions">
+            <button class="btn btn-ghost btn-sm" onclick="copyText('rbox-cover-${jobId}','rfb-cover-${jobId}')">Copy</button>
+            <span class="copy-fb" id="rfb-cover-${jobId}"></span>
+            <button class="btn btn-ghost btn-sm" onclick="openPDFModal(${JSON.stringify(r.cover_letter || '')}, 'Cover_Letter')">⬇ PDF</button>
+          </div>
+        </div>
+
+        <div class="rpanel" id="rpanel-${jobId}-ats">
+          <div id="rbox-ats-${jobId}"></div>
+        </div>
+
+        <div class="rpanel" id="rpanel-${jobId}-feedback">
+          <div id="rbox-fb-${jobId}"></div>
+        </div>`;
+
+      renderATSPanel(r.ats_report || {}, `rbox-ats-${jobId}`);
+      renderFeedbackPanel(r.recruiter_feedback || {}, r.hiring_manager_feedback || {}, `rbox-fb-${jobId}`);
+
+    } catch(e) {
+      resultsEl.innerHTML = `<div style="color:var(--danger);font-size:13px;padding:8px 0;">Error loading results: ${esc(e.message)}</div>`;
+    }
+  }
+
+  function switchRTab(jobId, name, el) {
+    document.querySelectorAll(`#rtabs-${jobId} .rtab`).forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    ['resume','cover','ats','feedback'].forEach(n => {
+      const p = document.getElementById(`rpanel-${jobId}-${n}`);
+      if (p) p.classList.toggle('active', n === name);
+    });
+  }
+
+  function copyText(boxId, fbId) {
+    const el = document.getElementById(boxId);
+    if (!el) return;
+    navigator.clipboard.writeText(el.textContent).then(() => {
+      const fb = document.getElementById(fbId);
+      if (fb) { fb.textContent = '✓ Copied!'; setTimeout(() => fb.textContent = '', 2000); }
+    });
+  }
+
+  async function dismissJob(id) {
+    try {
+      await fetch('/jobs/' + id, { method: 'DELETE' });
+      if (_expandedJob === id) _expandedJob = null;
+      loadJobs();
+    } catch(e) {}
+  }
+
+  // ── PDF modal ──
+  let _pendingPDFContent = null, _pendingPDFTitle = null;
+
+  function openPDFModal(content, title) {
+    _pendingPDFContent = content;
+    _pendingPDFTitle   = title;
+    document.getElementById('pdfModal').classList.add('open');
+  }
+  function closePDFModal() { document.getElementById('pdfModal').classList.remove('open'); }
+
+  async function confirmPDFDownload() {
+    const btn = document.getElementById('pdfConfirmBtn');
+    btn.disabled = true; btn.textContent = 'Generating…';
+    try {
+      await downloadPDFContent(_pendingPDFContent, _pendingPDFTitle, {
+        style:        document.getElementById('pdfStyle').value,
+        page_size:    document.getElementById('pdfPageSize').value,
+        margin:       document.getElementById('pdfMargin').value,
+        font_scale:   parseFloat(document.getElementById('pdfFontScale').value),
+        accent_color: document.getElementById('pdfAccentColor').value,
+        max_pages:    parseInt(document.getElementById('pdfMaxPages').value, 10),
+      });
+      closePDFModal();
+    } finally { btn.disabled = false; btn.textContent = 'Download PDF'; }
+  }
+
+  function selectStyle(el) {
+    document.querySelectorAll('.style-card').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('pdfStyle').value = el.dataset.val;
+  }
+  function selectColor(el) {
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('pdfAccentColor').value = el.dataset.color;
+  }
+  function syncCustomColor(input) {
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    input.closest('.swatch-custom').classList.add('active');
+  }
+  function selectSeg(el, hiddenId) {
+    el.closest('.seg-ctrl').querySelectorAll('.seg').forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById(hiddenId).value = el.dataset.val;
+  }
+
+  // ── Init ──
+  loadJobs();
+  setInterval(loadJobs, 4000);
+</script>
+
+<!-- PDF Options Modal (shared with index.html) -->
+<div class="modal-backdrop" id="pdfModal" onclick="if(event.target===this)closePDFModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📄 PDF Export Options</div>
+      <button class="modal-close" onclick="closePDFModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="opt-grid">
+        <div class="opt-block">
+          <label class="opt-label">Style</label>
+          <div class="style-cards" id="styleCards">
+            <div class="style-card active" data-val="classic" onclick="selectStyle(this)">
+              <div class="style-preview classic-prev"></div><span>Classic</span>
+            </div>
+            <div class="style-card" data-val="modern" onclick="selectStyle(this)">
+              <div class="style-preview modern-prev"></div><span>Modern</span>
+            </div>
+            <div class="style-card" data-val="minimal" onclick="selectStyle(this)">
+              <div class="style-preview minimal-prev"></div><span>Minimal</span>
+            </div>
+          </div>
+          <input type="hidden" id="pdfStyle" value="classic">
+        </div>
+        <div class="opt-block">
+          <label class="opt-label">Accent Color</label>
+          <div class="color-swatches">
+            <div class="swatch active" data-color="#0071E3" style="background:#0071E3" onclick="selectColor(this)" title="Blue"></div>
+            <div class="swatch" data-color="#4F46E5" style="background:#4F46E5" onclick="selectColor(this)" title="Indigo"></div>
+            <div class="swatch" data-color="#0F766E" style="background:#0F766E" onclick="selectColor(this)" title="Teal"></div>
+            <div class="swatch" data-color="#B45309" style="background:#B45309" onclick="selectColor(this)" title="Amber"></div>
+            <div class="swatch" data-color="#DC2626" style="background:#DC2626" onclick="selectColor(this)" title="Crimson"></div>
+            <div class="swatch" data-color="#1D4ED8" style="background:#1D4ED8" onclick="selectColor(this)" title="Navy"></div>
+            <div class="swatch swatch-custom" title="Custom">
+              <input type="color" id="pdfAccentColor" value="#0071E3" oninput="syncCustomColor(this)">
+            </div>
+          </div>
+        </div>
+        <div class="opt-block">
+          <label class="opt-label">Page Size</label>
+          <div class="seg-ctrl">
+            <button class="seg active" data-val="A4" onclick="selectSeg(this,'pdfPageSize')">A4</button>
+            <button class="seg" data-val="Letter" onclick="selectSeg(this,'pdfPageSize')">Letter</button>
+          </div>
+          <input type="hidden" id="pdfPageSize" value="A4">
+        </div>
+        <div class="opt-block">
+          <label class="opt-label">Margins</label>
+          <div class="seg-ctrl">
+            <button class="seg" data-val="narrow" onclick="selectSeg(this,'pdfMargin')">Narrow</button>
+            <button class="seg active" data-val="normal" onclick="selectSeg(this,'pdfMargin')">Normal</button>
+            <button class="seg" data-val="wide" onclick="selectSeg(this,'pdfMargin')">Wide</button>
+          </div>
+          <input type="hidden" id="pdfMargin" value="normal">
+        </div>
+        <div class="opt-block">
+          <label class="opt-label">Pages</label>
+          <div class="seg-ctrl">
+            <button class="seg active" data-val="0" onclick="selectSeg(this,'pdfMaxPages')">Auto</button>
+            <button class="seg" data-val="1" onclick="selectSeg(this,'pdfMaxPages')">1 page</button>
+            <button class="seg" data-val="2" onclick="selectSeg(this,'pdfMaxPages')">2 pages</button>
+          </div>
+          <input type="hidden" id="pdfMaxPages" value="0">
+        </div>
+        <div class="opt-block" style="grid-column:1/-1">
+          <label class="opt-label">Font Size — <span id="fontScaleLabel">100%</span></label>
+          <input type="range" id="pdfFontScale" min="0.8" max="1.3" step="0.05" value="1.0"
+                 oninput="document.getElementById('fontScaleLabel').textContent=Math.round(this.value*100)+'%'"
+                 style="width:100%;accent-color:var(--primary);">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closePDFModal()">Cancel</button>
+      <button class="btn btn-primary" id="pdfConfirmBtn" onclick="confirmPDFDownload()">⬇ Download PDF</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Modal styles (needed on this page) */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,.4); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal-box {
+    background: #FBFBFD; border-radius: var(--radius-xl);
+    box-shadow: 0 24px 64px rgba(0,0,0,.15);
+    width: 520px; max-width: calc(100vw - 32px); overflow: hidden;
+    animation: modalIn .18s ease;
+  }
+  @keyframes modalIn { from { transform: translateY(10px); opacity:0; } to { transform: none; opacity:1; } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px 14px; border-bottom: 1px solid var(--border); }
+  .modal-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .modal-close { width: 28px; height: 28px; border-radius: 6px; background: none; border: none; cursor: pointer; font-size: 13px; color: var(--text-3); display: flex; align-items: center; justify-content: center; transition: background .12s; }
+  .modal-close:hover { background: var(--surface); color: var(--text); }
+  .modal-body { padding: 18px 22px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 22px; border-top: 1px solid var(--border); background: var(--surface); }
+  .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .opt-block { display: flex; flex-direction: column; gap: 8px; }
+  .opt-label { font-size: 11px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; }
+  .style-cards { display: flex; gap: 8px; }
+  .style-card { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 8px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); cursor: pointer; font-size: 11px; font-weight: 500; color: var(--text-2); transition: all .12s; }
+  .style-card:hover { border-color: var(--primary); color: var(--primary); }
+  .style-card.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+  .style-preview { width: 42px; height: 32px; border-radius: 4px; border: 1px solid var(--border); }
+  .classic-prev { background: linear-gradient(to bottom, #E3F0FF 30%, white 30%); }
+  .modern-prev  { background: linear-gradient(to bottom, #EDE9FE 30%, white 30%); }
+  .minimal-prev { background: linear-gradient(to bottom, #F5F5F7 30%, white 30%); }
+  .color-swatches { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+  .swatch { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform .12s, border-color .12s; flex-shrink: 0; }
+  .swatch:hover { transform: scale(1.15); }
+  .swatch.active { border-color: var(--text); transform: scale(1.1); }
+  .swatch-custom { background: linear-gradient(135deg, #ff0080, #ff8c00, #40e0d0); position: relative; overflow: hidden; }
+  .swatch-custom input[type="color"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .seg-ctrl { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px; gap: 2px; }
+  .seg { flex: 1; padding: 5px 4px; font-size: 12px; font-weight: 500; font-family: inherit; border: none; border-radius: 5px; cursor: pointer; color: var(--text-2); background: none; transition: all .12s; }
+  .seg:hover:not(.active) { color: var(--text); background: rgba(0,0,0,.04); }
+  .seg.active { background: #FBFBFD; color: var(--primary); box-shadow: var(--shadow-sm); }
+</style>
+
+</body>
+</html>

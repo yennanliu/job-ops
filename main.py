@@ -357,6 +357,11 @@ async def history_page():
     return FileResponse("static/history.html")
 
 
+@app.get("/jobs-page")
+async def jobs_page():
+    return FileResponse("static/jobs.html")
+
+
 @app.post("/tailor", response_model=TailorResponse, dependencies=[Depends(verify_api_key)])
 @limiter.limit("10/minute")
 async def tailor(request: Request, body: TailorRequest):
@@ -472,6 +477,22 @@ async def create_tailor_job(request: Request, body: TailorRequest):
 @app.get("/jobs")
 async def list_jobs():
     return job_store.summary()
+
+
+@app.get("/jobs/{job_id}")
+async def get_job(job_id: str):
+    job = job_store.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    data = {
+        "id": job.id, "label": job.label, "status": job.status,
+        "iterations": job.iterations, "current_iter": job.current_iter,
+        "final_score": job.final_score, "error": job.error,
+        "created_at": job.created_at,
+    }
+    if job.result:
+        data["result"] = job.result
+    return data
 
 
 @app.get("/jobs/{job_id}/stream")
