@@ -1050,7 +1050,7 @@ Requirements:
     if (_iterResumes.length > 1) {
       iterBtns.innerHTML = _iterResumes
         .sort((a, b) => a.iteration - b.iteration)
-        .map(r => `<button class="btn btn-ghost btn-sm" onclick="openPDFModal(${JSON.stringify(r.resume)}, 'Resume_Iter_${r.iteration}')">⬇ Iter ${r.iteration} PDF</button>`)
+        .map(r => `<button class="btn btn-ghost btn-sm" onclick="openPDFModal(_iterResumes.find(x=>x.iteration===${r.iteration})?.resume||'', 'Resume_Iter_${r.iteration}')">⬇ Iter ${r.iteration} PDF</button>`)
         .join('');
       iterRow.style.display = '';
     } else {

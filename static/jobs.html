@@ -204,6 +204,7 @@
 <script src="/static/app.js"></script>
 <script>
   let _expandedJob = null;
+  const _jobResults = {};  // jobId -> { tailored_resume, cover_letter, ... }
 
   async function loadJobs() {
     try {
@@ -323,8 +324,8 @@
       const r = data.result;
       if (!r) { resultsEl.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:8px 0;">No results yet.</div>'; return; }
 
-      const atsScore = r.ats_report?.score || 0;
-      const atsColor = atsScore >= 75 ? 'var(--success)' : atsScore >= 50 ? 'var(--warning)' : 'var(--danger)';
+      // Store results by jobId so onclick handlers can access safely
+      _jobResults[jobId] = r;
 
       resultsEl.innerHTML = `
         <div class="rtabs" id="rtabs-${jobId}">
@@ -339,7 +340,7 @@
           <div class="result-actions">
             <button class="btn btn-ghost btn-sm" onclick="copyText('rbox-resume-${jobId}','rfb-resume-${jobId}')">Copy</button>
             <span class="copy-fb" id="rfb-resume-${jobId}"></span>
-            <button class="btn btn-ghost btn-sm" onclick="openPDFModal(${JSON.stringify(r.tailored_resume || '')}, 'Tailored_Resume')">⬇ PDF</button>
+            <button class="btn btn-ghost btn-sm" onclick="openPDFModalFromJob('${jobId}','resume')">⬇ PDF</button>
           </div>
         </div>
 
@@ -348,7 +349,7 @@
           <div class="result-actions">
             <button class="btn btn-ghost btn-sm" onclick="copyText('rbox-cover-${jobId}','rfb-cover-${jobId}')">Copy</button>
             <span class="copy-fb" id="rfb-cover-${jobId}"></span>
-            <button class="btn btn-ghost btn-sm" onclick="openPDFModal(${JSON.stringify(r.cover_letter || '')}, 'Cover_Letter')">⬇ PDF</button>
+            <button class="btn btn-ghost btn-sm" onclick="openPDFModalFromJob('${jobId}','cover')">⬇ PDF</button>
           </div>
         </div>
 
@@ -402,6 +403,15 @@
     _pendingPDFTitle   = title;
     document.getElementById('pdfModal').classList.add('open');
   }
+
+  function openPDFModalFromJob(jobId, type) {
+    const r = _jobResults[jobId];
+    if (!r) return;
+    const content = type === 'cover' ? r.cover_letter : r.tailored_resume;
+    const title   = type === 'cover' ? 'Cover_Letter' : 'Tailored_Resume';
+    openPDFModal(content || '', title);
+  }
+
   function closePDFModal() { document.getElementById('pdfModal').classList.remove('open'); }
 
   async function confirmPDFDownload() {
