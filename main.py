@@ -237,7 +237,7 @@ def _check_token_estimate(resume: str, jd: str) -> None:
 class TailorRequest(BaseModel):
     resume: str = Field(..., min_length=100, max_length=24000)
     job_description: str = Field(..., min_length=50, max_length=12000)
-    materials: str = Field(default="", max_length=4000)
+    materials: str = Field(default="", max_length=20000)
     # Cover letter intent
     cover_letter_tone: str = Field(default="professional")   # professional | conversational | concise
     cover_letter_length: str = Field(default="standard")     # brief | standard | detailed

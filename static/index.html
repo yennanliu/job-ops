@@ -41,8 +41,36 @@
     .accordion-trigger.open .chevron { transform: rotate(180deg); }
     .accordion-body { display: none; padding: 16px 18px; border-top: 1px solid var(--border); background: var(--white); }
     .accordion-body.open { display: block; }
-    .accordion-body textarea { min-height: 140px; }
+    .accordion-body textarea { min-height: 100px; }
     .materials-hint { font-size: 12px; color: var(--text-2); margin-bottom: 10px; line-height: 1.6; }
+
+    /* File drop zone */
+    .drop-zone {
+      border: 2px dashed var(--border); border-radius: var(--radius-sm);
+      padding: 20px; text-align: center; cursor: pointer;
+      transition: border-color .2s, background .2s; margin-bottom: 10px;
+      background: var(--surface);
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--primary); background: var(--primary-light);
+    }
+    .drop-zone-icon { font-size: 22px; margin-bottom: 6px; }
+    .drop-zone-text { font-size: 13px; color: var(--text-2); font-weight: 500; }
+    .drop-zone-sub  { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+
+    /* File chips */
+    .file-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 0; }
+    .file-chip {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 10px 4px 8px; border-radius: 999px;
+      background: var(--primary-light); border: 1.5px solid rgba(0,113,227,.2);
+      font-size: 12px; font-weight: 600; color: var(--primary);
+    }
+    .file-chip-remove {
+      background: none; border: none; cursor: pointer; color: var(--primary);
+      font-size: 14px; line-height: 1; padding: 0; opacity: .6;
+    }
+    .file-chip-remove:hover { opacity: 1; }
 
     /* Action bar */
     .action-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
@@ -456,16 +484,32 @@
       <!-- Additional materials -->
       <div class="accordion">
         <button class="accordion-trigger" id="matTrigger" onclick="toggleAccordion('matTrigger','matBody')">
-          <span>📎 What to Highlight <span style="font-weight:400;color:var(--text-3);font-size:13px;">— achievements, bio, personal story</span></span>
+          <span>📎 What to Highlight <span style="font-weight:400;color:var(--text-3);font-size:13px;">— files, achievements, bio, personal story</span></span>
           <span class="chevron">▼</span>
         </button>
         <div class="accordion-body" id="matBody">
-          <div class="chip-row" style="margin-bottom:10px;">
+
+          <!-- Drop zone -->
+          <div class="drop-zone" id="matDropZone"
+               onclick="document.getElementById('matFileInput').click()"
+               ondragover="matDragOver(event)" ondragleave="matDragLeave(event)" ondrop="matDrop(event)">
+            <div class="drop-zone-icon">📂</div>
+            <div class="drop-zone-text">Drop files here or <u>browse</u></div>
+            <div class="drop-zone-sub">Any text file (.txt, .md, .pdf text, etc.) — the AI reads them as context</div>
+          </div>
+          <input type="file" id="matFileInput" multiple accept=".txt,.md,.csv,.json,.html,.tex,.rtf" style="display:none" onchange="matFilesSelected(this.files)">
+
+          <!-- Uploaded file chips -->
+          <div class="file-chips" id="matFileChips"></div>
+
+          <!-- Quick-add chips -->
+          <div class="chip-row" style="margin-bottom:8px;">
             <button class="chip-btn" onclick="addMaterial('I led a team that reduced infrastructure costs by 40%.')">Cost reduction</button>
             <button class="chip-btn" onclick="addMaterial('I have 5 years of experience leading distributed teams across 3 time zones.')">Team leadership</button>
             <button class="chip-btn" onclick="addMaterial('My work was featured in TechCrunch and scaled to 1M users in 6 months.')">Notable achievement</button>
           </div>
-          <textarea id="materialsInput" placeholder="Add anything that helps personalize your cover letter: a short bio, career highlights, personal statement, or specific achievements…" oninput="countChars('materialsInput','matCount')"></textarea>
+
+          <textarea id="materialsInput" placeholder="Or type directly: a short bio, career highlights, personal statement, specific achievements…" oninput="updateMatCount()"></textarea>
           <div class="char-hint" id="matCount" style="margin-top:5px;">0 chars</div>
         </div>
       </div>
@@ -858,7 +902,7 @@
   function addMaterial(text) {
     const el = document.getElementById('materialsInput');
     el.value = el.value ? el.value + '\n' + text : text;
-    countChars('materialsInput', 'matCount');
+    updateMatCount();
   }
 
   function toggleSidebar() {
@@ -1115,7 +1159,7 @@ Requirements:
   async function queueAndStream() {
     const resume   = document.getElementById('resumeInput').value.trim();
     const jd       = document.getElementById('jdInput').value.trim();
-    const mats     = document.getElementById('materialsInput').value.trim();
+    const mats     = _buildMaterials();
     const clTone   = document.getElementById('clTone')?.value || 'professional';
     const clLength = document.getElementById('clLength')?.value || 'standard';
     const clEmph   = document.getElementById('emphasisInput')?.value.trim() || '';
@@ -1210,6 +1254,8 @@ Requirements:
       const el = document.getElementById(id);
       if (el) { el.value = ''; el.classList.remove('invalid'); }
     });
+    _matFiles = [];
+    _renderFileChips();
     const clTone = document.getElementById('clTone');
     if (clTone) clTone.value = 'professional';
     const clLen = document.getElementById('clLength');
@@ -1217,7 +1263,7 @@ Requirements:
     ['resumeErr','jdErr'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent=''; });
     countChars('resumeInput','resumeCount');
     countChars('jdInput','jdCount');
-    countChars('materialsInput','matCount');
+    updateMatCount();
 
     document.getElementById('resumeOutput').textContent = 'Your tailored resume will appear here after processing…';
     document.getElementById('resumeOutput').classList.add('empty');
@@ -1326,6 +1372,75 @@ Requirements:
   async function dlIdeal() {
     if (!_idealResume) return;
     openPDFModal(_idealResume, 'Ideal_Resume');
+  }
+
+  // ── Uploaded materials files ──
+  let _matFiles = [];   // [{name, content}]
+
+  function _buildMaterials() {
+    // Combine uploaded file contents + manual textarea text
+    const parts = [];
+    for (const f of _matFiles) {
+      parts.push(`=== ${f.name} ===\n${f.content}`);
+    }
+    const manual = document.getElementById('materialsInput').value.trim();
+    if (manual) parts.push(manual);
+    return parts.join('\n\n');
+  }
+
+  function updateMatCount() {
+    const total = _buildMaterials().length;
+    document.getElementById('matCount').textContent = total.toLocaleString() + ' chars';
+  }
+
+  function _renderFileChips() {
+    const container = document.getElementById('matFileChips');
+    container.innerHTML = _matFiles.map((f, i) =>
+      `<div class="file-chip">
+        <span>📄 ${f.name}</span>
+        <button class="file-chip-remove" onclick="matRemoveFile(${i})" title="Remove">✕</button>
+      </div>`
+    ).join('');
+    updateMatCount();
+  }
+
+  function matRemoveFile(idx) {
+    _matFiles.splice(idx, 1);
+    _renderFileChips();
+  }
+
+  function matReadFiles(files) {
+    for (const file of files) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        // Avoid duplicates by name
+        _matFiles = _matFiles.filter(f => f.name !== file.name);
+        _matFiles.push({ name: file.name, content: e.target.result });
+        _renderFileChips();
+        // Auto-open accordion so user sees the chips
+        const body = document.getElementById('matBody');
+        if (!body.classList.contains('open')) toggleAccordion('matTrigger', 'matBody');
+      };
+      reader.readAsText(file);
+    }
+  }
+
+  function matFilesSelected(files) {
+    matReadFiles(Array.from(files));
+    document.getElementById('matFileInput').value = '';
+  }
+
+  function matDragOver(e) {
+    e.preventDefault();
+    document.getElementById('matDropZone').classList.add('drag-over');
+  }
+  function matDragLeave(e) {
+    document.getElementById('matDropZone').classList.remove('drag-over');
+  }
+  function matDrop(e) {
+    e.preventDefault();
+    document.getElementById('matDropZone').classList.remove('drag-over');
+    matReadFiles(Array.from(e.dataTransfer.files));
   }
 </script>
 </body>
