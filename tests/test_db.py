@@ -1,8 +1,4 @@
 """Unit tests for db.py using a temporary in-memory SQLite database."""
-import json
-import sqlite3
-import tempfile
-from pathlib import Path
 
 import pytest
 

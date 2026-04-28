@@ -2,7 +2,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from agent.graph import resume_agent
+from agent.graph import resume_agent  # noqa: E402
 
 RESUME = """
 John Doe | john@example.com | github.com/johndoe

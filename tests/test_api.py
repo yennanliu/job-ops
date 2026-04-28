@@ -1,9 +1,5 @@
 """Integration tests for FastAPI routes (no real LLM calls)."""
-import json
-import os
 import pytest
-import pytest_asyncio
-from unittest.mock import AsyncMock, patch, MagicMock
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────

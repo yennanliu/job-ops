@@ -618,7 +618,7 @@ def _get_pdf_fonts() -> tuple[str, str, str]:
 
 def _render_pdf(content: str, title: str, structure: dict | None, opts: dict | None = None) -> io.BytesIO:
     from reportlab.lib import colors
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    from reportlab.lib.enums import TA_RIGHT
     from reportlab.lib.pagesizes import A4, LETTER
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import cm
@@ -829,16 +829,26 @@ def _render_pdf(content: str, title: str, structure: dict | None, opts: dict | N
             def _fs(base: float) -> float:
                 return round(base * current_scale, 1)
 
-            s_name.fontSize    = _fs(22); s_name.leading    = _fs(26)
-            s_job_ttl.fontSize = _fs(11); s_job_ttl.leading = _fs(14)
-            s_contact.fontSize = _fs(9);  s_contact.leading = _fs(12)
-            s_section.fontSize = _fs(9);  s_section.leading = _fs(12)
-            s_body.fontSize    = _fs(10); s_body.leading    = _fs(14)
-            s_bullet.fontSize  = _fs(10); s_bullet.leading  = _fs(14)
-            s_exp_ttl.fontSize = _fs(10); s_exp_ttl.leading = _fs(13)
-            s_exp_co.fontSize  = _fs(9);  s_exp_co.leading  = _fs(12)
-            s_dates.fontSize   = _fs(9);  s_dates.leading   = _fs(12)
-            s_cover.fontSize   = _fs(10.5); s_cover.leading = _fs(16)
+            s_name.fontSize = _fs(22)
+            s_name.leading = _fs(26)
+            s_job_ttl.fontSize = _fs(11)
+            s_job_ttl.leading = _fs(14)
+            s_contact.fontSize = _fs(9)
+            s_contact.leading = _fs(12)
+            s_section.fontSize = _fs(9)
+            s_section.leading = _fs(12)
+            s_body.fontSize = _fs(10)
+            s_body.leading = _fs(14)
+            s_bullet.fontSize = _fs(10)
+            s_bullet.leading = _fs(14)
+            s_exp_ttl.fontSize = _fs(10)
+            s_exp_ttl.leading = _fs(13)
+            s_exp_co.fontSize = _fs(9)
+            s_exp_co.leading = _fs(12)
+            s_dates.fontSize = _fs(9)
+            s_dates.leading = _fs(12)
+            s_cover.fontSize = _fs(10.5)
+            s_cover.leading = _fs(16)
 
     _build_doc(story, buf)
     buf.seek(0)
